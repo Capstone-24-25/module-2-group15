@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ## this script contains functions for preprocessing
 ## claims data; intended to be sourced 
 require(tidyverse)
@@ -58,7 +57,7 @@ nlp_fn <- function(parse_data.out){
                 values_fill = 0)
   return(out)
 }
-=======
+
 ## this script contains functions for preprocessing
 ## claims data; intended to be sourced 
 require(tidyverse)
