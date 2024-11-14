@@ -59,4 +59,7 @@ nlp_fn <- function(parse_data.out){
 }
 
 
-parsed_data = parse_data(claims_raw)
+prelim1_data = parse_data(claims_raw)
+
+save(prelim1_data, file = 'data/prelim1_data.RData')
+

@@ -3,6 +3,7 @@ require(keras)
 require(tensorflow)
 load('data/claims-test.RData')
 load('data/claims-raw.RData')
+load('data/prelim1_data.RData')
 source('scripts/preprocessing.R')
 tf_model <- load_model_tf('results/example-model')
 
@@ -28,5 +29,7 @@ pred_classes <- factor(preds > 0.5, labels = class_labels)
 pred_df <- clean_df %>%
   bind_cols(bclass.pred = pred_classes) %>%
   select(.id, bclass.pred)
-
+  
 save(pred_df, file = 'results/example-preds.RData')
+
+
