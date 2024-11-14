@@ -58,6 +58,26 @@ nlp_fn <- function(parse_data.out){
   return(out)
 }
 
+nlp_fn_bigrams <- function(parse_data.out){
+  out <- parse_data.out %>% 
+    unnest_tokens(output = bigram, 
+                  input = text_clean, 
+                  token = 'ngrams', 
+                  n = 2, 
+                  stopwords = str_remove_all(stop_words$word, 
+                                             '[[:punct:]]')) %>%
+    separate(bigram, into = c("word1", "word2"), sep = " ") %>%
+    unite("bigram", word1, word2, sep = " ") %>%
+    count(.id, bclass, bigram, name = 'n') %>%
+    bind_tf_idf(term = bigram, 
+                document = .id,
+                n = n) %>%
+    pivot_wider(id_cols = c('.id', 'bclass'),
+                names_from = 'bigram',
+                values_from = 'tf_idf',
+                values_fill = 0)
+  return(out)
+}
 
 prelim1_data = parse_data(claims_test)
 
