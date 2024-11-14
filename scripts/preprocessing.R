@@ -79,7 +79,7 @@ nlp_fn_bigrams <- function(parse_data.out){
   return(out)
 }
 
-prelim1_data = parse_data(claims_test)
+prelim1_data = parse_data(claims_raw)
 
 save(prelim1_data, file = 'data/prelim1_data.RData')
 
