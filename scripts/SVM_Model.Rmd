@@ -5,13 +5,113 @@ date: "2024-11-14"
 output: html_document
 ---
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # Import libraries
+library(dplyr)
+library(tidyr)
+library(tidymodels)
+library(knitr)
+library(tidyverse)
+library(tidytext)
+library(textstem)
+library(rvest)
+library(qdapRegex)
+library(stopwords)
+library(tokenizers)
+library(kableExtra)
+library(kernlab)
 ```
 
 
 ```{r}
-# Import data
+# Import training data
+load("~/GitHub/module-2-group15/data/prelim1_data.RData")
 
+head(prelim1_data)
 ```
 
+```{r}
+# tokenize the data and select relevant columns
+tokenized_data <- nlp_fn_multi(prelim1_data)
+
+# Set class as a factor
+tokenized_data$mclass <- as.factor(tokenized_data$mclass)
+
+head(tokenized_data)
+```
+
+```{r}
+# v-fold cross validation
+text_folds <- vfold_cv(data=tokenized_data, v=3, strata = mclass)
+```
+
+
+```{r}
+# Create a recipe for the model
+text_recipe <- recipe(mclass ~ ., data=tokenized_data %>% select(-.id)) %>%
+  step_pca(all_predictors(), num_comp = 100) %>%
+  step_dummy(all_nominal_predictors()) %>%  
+  step_normalize(all_predictors()) %>% 
+  step_zv(all_predictors()) %>%  
+  step_center(all_predictors()) %>% 
+  step_scale(all_predictors()) %>% 
+  step_nzv(all_predictors()) 
+```
+
+```{r}
+# Define SVM model
+#svm_model <- svm_rbf(cost = tune(), rbf_sigma = tune()) %>% 
+#  set_mode("classification") %>% 
+#  set_engine("kernlab")
+
+# Define SVM workflow
+#svm_wkflow <- workflow() %>% 
+#  add_model(svm_model) %>% 
+#  add_recipe(text_recipe)
+
+# Define SVM tuning grid
+#svm_tune_grid <- grid_random(cost(), rbf_sigma(), size = 10)
+
+# Store model results
+#svm_tuned <- tune_grid(
+#  object=svm_wkflow,
+#  resamples = text_folds,
+#  grid = svm_tune_grid,
+#  metrics = metric_set(roc_auc)
+#)
+```
+
+```{r}
+# save svm model
+write_rds(svm_tune_res, file = "models/svm.rds")
+```
+
+```{r}
+# load svm model
+svm_tuned <- read_rds(file = "models/svm.rds")
+
+best_svm_model <- collect_metrics(svm_tuned) %>%
+  filter(.metric == "roc_auc") %>%
+  arrange(desc(mean)) %>%
+  slice(1)
+
+best_svm_model
+```
+
+```{r}
+# SVM autoplot
+autoplot(svm_tuned, metric = 'roc_auc') + 
+  ggtitle("SVM Classifier ROC AUC Tuning Results") + 
+  ylab("Area Under ROC Curve") + 
+  theme_minimal()
+```
+
+
+```{r}
+# Classification accuracy visualization (TODO)
+final_svm_model <- finalize_workflow(svm_wkflow, best_svm_model)
+final_svm_model_train <- fit(final_svm_model, tokenized_data)
+
+final_svm_model_test <- augment(final_svm_model_train, new_data = claims_test)
+final_svm_model_test
+```
