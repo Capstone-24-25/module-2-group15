@@ -59,16 +59,9 @@ load("~/GitHub/module-2-group15/data/prelim1_data.RData")
 head(prelim1_data)
 ```
 
-```{r}
-# Import testing data
-load("~/GitHub/module-2-group15/data/claims-test.RData")
-
-head(claims_test)
-```
-
 
 ```{r}
-# tokenize the data and select relevant columns
+# tokenize the data
 tokenized_data <- nlp_fn_multi(prelim1_data)
 
 # Set class as a factor
