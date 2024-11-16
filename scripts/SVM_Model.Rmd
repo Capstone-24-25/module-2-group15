@@ -20,6 +20,11 @@ library(stopwords)
 library(tokenizers)
 library(kableExtra)
 library(kernlab)
+library(Matrix)
+library(sparsesvd)
+library(caret)
+library(irlba)
+library(factoextra)
 ```
 
 
@@ -48,17 +53,78 @@ tokenized_data$mclass <- as.factor(tokenized_data$mclass)
 head(tokenized_data)
 ```
 
+```{r}
+# Split labels and predictors
+
+# Isolate predictors
+train_preds <- tokenized_data %>%
+  select(-.id, -mclass)
+
+# Isolate Labels
+train_labels <- tokenized_data %>%
+  select(.id, mclass)
+
+# View Predictors
+head(train_preds)
+
+# View labels
+head(train_labels)
+```
+
+
+```{r}
+# Perform PCA on training set
+# This section is commented out for time convenience 
+# Results are stored as 'principal_components.RData'
+
+# Ensure all columns in train_preds are numeric
+# train_preds <- as.data.frame(lapply(train_preds, as.numeric))  # Convert all columns to numeric
+
+# Step 2: Remove near-zero variance columns to reduce dimensionality
+# nzv <- nearZeroVar(train_preds, saveMetrics = TRUE)
+# train_preds_reduced <- train_preds[, !nzv$nzv]  # Keep only columns with non-zero variance
+
+# Convert to a matrix for PCA
+# train_matrix <- as.matrix(train_preds_reduced)
+
+# Perform PCA, find 50 components
+# k <- 50 
+# pca_irlba <- irlba(train_matrix, nv = k)
+
+# Extract and store the principal components
+# principal_components <- pca_irlba$u %*% diag(pca_irlba$d)
+```
+
+```{r}
+# save the principal components
+# save(principal_components, file ='principal_components.RData')
+```
+
+```{r}
+# load the principal components
+load("~/GitHub/module-2-group15/scripts/principal_components.RData")
+```
+
+
+```{r}
+# Convert principal components to data frame
+pc_df <- as.data.frame(principal_components)
+
+# Combine labels with new projected matrix
+projected_train_set <- train_labels %>%
+  transmute(mclass = factor(mclass)) %>%
+  bind_cols(pc_df)
+```
 
 ```{r}
 # v-fold cross validation
-text_folds <- vfold_cv(data=tokenized_data, v=3, strata = mclass)
+text_folds <- vfold_cv(data=projected_train_set, v=3, strata=mclass)
 ```
 
 
 ```{r}
 # Create a recipe for the model
-text_recipe <- recipe(mclass ~ ., data=tokenized_data %>% select(-.id)) %>%
-  step_pca(all_predictors(), num_comp = 100) %>%
+text_recipe <- recipe(mclass ~ ., data=projected_train_set) %>%
   step_dummy(all_nominal_predictors()) %>%  
   step_normalize(all_predictors()) %>% 
   step_zv(all_predictors()) %>%  
@@ -69,30 +135,30 @@ text_recipe <- recipe(mclass ~ ., data=tokenized_data %>% select(-.id)) %>%
 
 ```{r}
 # Define SVM model
-#svm_model <- svm_rbf(cost = tune(), rbf_sigma = tune()) %>% 
-#  set_mode("classification") %>% 
-#  set_engine("kernlab")
+svm_model <- svm_rbf(cost = tune(), rbf_sigma = tune()) %>% 
+  set_mode("classification") %>% 
+  set_engine("kernlab")
 
 # Define SVM workflow
-#svm_wkflow <- workflow() %>% 
-#  add_model(svm_model) %>% 
-#  add_recipe(text_recipe)
+svm_wkflow <- workflow() %>% 
+  add_model(svm_model) %>% 
+  add_recipe(text_recipe)
 
 # Define SVM tuning grid
-#svm_tune_grid <- grid_random(cost(), rbf_sigma(), size = 10)
+svm_tune_grid <- grid_random(cost(), rbf_sigma(), size = 10)
 
 # Store model results
-#svm_tuned <- tune_grid(
-#  object=svm_wkflow,
-#  resamples = text_folds,
-#  grid = svm_tune_grid,
-#  metrics = metric_set(roc_auc)
-#)
+svm_tuned <- tune_grid(
+  object=svm_wkflow,
+  resamples = text_folds,
+  grid = svm_tune_grid,
+  metrics = metric_set(roc_auc)
+)
 ```
 
 ```{r}
 # save svm model
-write_rds(svm_tune_res, file = "models/svm.rds")
+# write_rds(svm_tuned, file = "models/svm.rds")
 ```
 
 ```{r}
@@ -118,9 +184,13 @@ autoplot(svm_tuned, metric = 'roc_auc') +
 
 ```{r}
 # Classification accuracy visualization (TODO)
-final_svm_model <- finalize_workflow(svm_wkflow, best_svm_model)
-final_svm_model_train <- fit(final_svm_model, tokenized_data)
 
-final_svm_model_test <- augment(final_svm_model_train, new_data = claims_test)
-final_svm_model_test
+# have to take the testing set, tokenize, and get into pca form
+# use this pca form testing set, run trained model on it.
+
+final_svm_model <- finalize_workflow(svm_wkflow, best_svm_model)
+final_svm_model_train <- fit(final_svm_model, projected_train_set)
+
+# final_svm_model_test <- augment(final_svm_model_train, new_data = claims_test)
+# final_svm_model_test
 ```
