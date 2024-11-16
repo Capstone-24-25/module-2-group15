@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## this script contains functions for preprocessing
 ## claims data; intended to be sourced 
 require(tidyverse)

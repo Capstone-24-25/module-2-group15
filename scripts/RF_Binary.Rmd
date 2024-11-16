@@ -1,0 +1,101 @@
+---
+title: "Random Forest multiclass model"
+author: "Sophia Mirrashidi"
+date: "2024-11-15"
+output: html_document
+---
+
+```{r}
+# Import libraries
+library(dplyr)
+library(tidyr)
+library(tidymodels)
+library(knitr)
+library(tidyverse)
+library(ranger)
+library(tidytext)
+library(textstem)
+library(rvest)
+library(qdapRegex)
+library(vip)
+library(stopwords)
+library(tokenizers)
+
+load('../data/claims-test.RData')
+load('../data/claims-raw.RData')
+source('../scripts/preprocessing.R')
+```
+
+### Binary Model
+
+```{r}
+parsed_claims = parse_data(claims_raw)
+token_data = nlp_fn(parsed_claims)
+token_data$bclass = as.factor(token_data$bclass)
+
+split = initial_split(token_data, prop = 0.75, strata = bclass)
+training = training(split)
+testing = testing(split)
+folds = vfold_cv(data=token_data, v=3, strata = bclass)
+
+recipe = recipe(bclass ~ ., data=training %>% select(-.id)) %>%
+  step_pca(all_predictors(), num_comp = 100) %>%
+  step_dummy(all_nominal_predictors()) %>%  
+  step_zv(all_predictors()) %>%  
+  step_nzv(all_predictors()) 
+```
+
+
+```{r}
+rf_model = rand_forest(mtry = tune(), 
+                       min_n = tune(),
+                       trees = tune()) %>%
+  set_engine("ranger", importance = "impurity") %>% 
+  set_mode("classification")
+
+rf_wrkflw = workflow() %>% 
+  add_model(rf_model) %>% 
+  add_recipe(recipe)
+
+rf_grid = grid_random(
+  mtry(range = c(1, 10)), 
+  trees(range = c(200, 400)), 
+  min_n(range = c(5, 10)),
+  size = 20
+)
+```
+
+```{r}
+# rf_tune = tune_grid(
+#   rf_wrkflw,
+#   resamples = folds,
+#   grid = rf_grid
+# )
+# 
+# save(rf_tune, file = "../results/rf-binary.rda")
+```
+
+```{r}
+load("../results/rf-binary.rda")
+autoplot(rf_tune) + theme_minimal()
+rf_best = select_best(rf_tune, metric = "roc_auc")
+(rf_best)
+```
+
+```{r}
+rf_final = finalize_workflow(rf_wrkflw, rf_best)
+rf_final = fit(rf_final, training)
+
+rf_final %>% extract_fit_parsnip() %>% 
+  vip() +
+  theme_minimal()
+
+rf_final_test = augment(rf_final, testing) %>% 
+  select(bclass, starts_with(".pred"))
+
+accuracy_result = rf_final_test %>%
+  accuracy(truth = bclass, estimate = .pred_class)
+
+(accuracy_result)
+```
+Final Accuracy: ~79%
