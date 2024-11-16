@@ -1,0 +1,116 @@
+---
+title: Neural Network Models
+output: html_document
+---
+
+```{r}
+path <- "../data/claims-raw.RData"
+
+load(path)
+```
+
+```{r, results=FALSE, warning=FALSE, message=FALSE}
+require(tidyverse)
+require(tidytext)
+require(textstem)
+require(rvest)
+require(qdapRegex)
+require(stopwords)
+require(tokenizers)
+
+parse_fn <- function(.html) {
+  read_html(.html) %>%
+    html_elements("p, h1, h2, span") %>%
+    html_text2() %>%
+    str_c(collapse = " ") %>%
+    rm_url() %>%
+    rm_email() %>%
+    str_remove_all("'") %>%
+    str_replace_all(paste(
+      c(
+        "\n",
+        "[[:punct:]]",
+        "nbsp",
+        "[[:digit:]]",
+        "[[:symbol:]]"
+      ),
+      collapse = "|"
+    ), " ") %>%
+    str_replace_all("([a-z])([A-Z])", "\\1 \\2") %>%
+    tolower() %>%
+    str_replace_all("\\s+", " ")
+}
+
+# function to apply to claims data
+parse_data <- function(.df) {
+  out <- .df %>%
+    filter(str_detect(text_tmp, "<!")) %>%
+    rowwise() %>%
+    mutate(text_clean = parse_fn(text_tmp)) %>%
+    unnest(text_clean)
+  return(out)
+}
+
+claims_clean <- parse_data(claims_raw)
+```
+
+```{r, results=FALSE, warning=FALSE, message=FALSE}
+require(keras3)
+
+max_words <- 5000
+max_len <- 100
+
+vectorize_layer <- layer_text_vectorization(
+  max_tokens = max_words,
+  output_mode = "int",
+  output_sequence_length = max_len
+)
+
+vectorize_layer %>% adapt(claims_clean$text_clean)
+
+data <- vectorize_layer(claims_clean$text_clean) %>% as.matrix()
+
+labels <- claims_clean$bclass
+levels(labels) <- c(0, 1)
+
+set.seed(123)
+indices <- sample(1:nrow(data), size = 0.8 * nrow(data))
+x_train <- data[indices, ]
+y_train <- labels[indices]
+x_test <- data[-indices, ]
+y_test <- labels[-indices]
+
+set.seed(11162024)
+
+model <- keras_model_sequential() %>%
+  layer_embedding(input_dim = max_words, output_dim = 128) %>%
+  layer_conv_1d(filters = 128, kernel_size = 5, activation = "relu") %>%
+  layer_max_pooling_1d(pool_size = 5) %>%
+  layer_conv_1d(filters = 128, kernel_size = 5, activation = "relu") %>%
+  layer_max_pooling_1d(pool_size = 5) %>%
+  layer_flatten() %>%
+  layer_dense(units = 64, activation = "relu") %>%
+  layer_dropout(rate = 0.5) %>%
+  layer_dense(units = 1, activation = "sigmoid")
+
+model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+
+history <- model %>% fit(
+  x_train, y_train,
+  epochs = 10,
+  batch_size = 32,
+  validation_split = 0.2
+)
+```
+
+```{r}
+plot(history)
+
+score <- model %>% evaluate(x_test, y_test)
+cat("Test loss:", score$loss, "\n")
+cat("Test accuracy:", score$acc, "\n")
+```
