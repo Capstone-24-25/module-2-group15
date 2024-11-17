@@ -7,6 +7,7 @@ output: html_document
 
 ```{r, warning=FALSE, message=FALSE}
 # Import libraries
+set.seed(101)
 library(dplyr)
 library(tidyr)
 library(tidymodels)
@@ -25,11 +26,19 @@ library(sparsesvd)
 library(caret)
 library(irlba)
 library(factoextra)
+library(vip)
+```
+
+```{r}
+# Notes
+# PCA is performed on the tokenized dataset prior to training the model
+# the prelim1_data was obtained by running parse_data(claims_raw) in preprocessing script
+# Uses 50 principal components
 ```
 
 
 ```{r}
-# NLP Functions, remove and tidy up later
+# NLP Function
 nlp_fn_multi <- function(parse_data.out){
   out <- parse_data.out %>% 
     unnest_tokens(output = token, 
@@ -71,36 +80,36 @@ head(tokenized_data)
 ```
 
 ```{r}
-# Method 2 testing (TODO)
+# Method 2, performs pca in the recipe (TODO, crashes my computer)
 
 # split data
 
-split = initial_split(tokenized_data, prop = 0.70, strata = mclass)
-training = training(split)
-testing = testing(split)
+#text_split = initial_split(tokenized_data, prop = 0.70, strata = mclass)
+#text_training = training(split)
+#text_testing = testing(split)
 
 # v fold cross validation
-text_folds = vfold_cv(data=tokenized_data, v=3, strata = mclass)
+#text_folds = vfold_cv(data=tokenized_data, v=3, strata = mclass)
 
 # create recipe with pca
-recipe = recipe(mclass ~ ., data=training %>% select(-.id)) %>%
-  step_pca(all_predictors(), num_comp = 100) %>%
-  step_dummy(all_nominal_predictors()) %>%
-  step_zv(all_predictors(), -all_outcomes()) %>%
-  step_nzv(all_predictors(), -all_outcomes())
+#recipe = recipe(mclass ~ ., data=text_training %>% select(-.id)) %>%
+#  step_pca(all_predictors(), num_comp = 100) %>%
+#  step_dummy(all_nominal_predictors()) %>%
+#  step_zv(all_predictors(), -all_outcomes()) %>%
+#  step_nzv(all_predictors(), -all_outcomes())
   
 # run svm model on training set
-svm_model <- svm_rbf(cost = tune(), rbf_sigma = tune()) %>% 
-  set_mode("classification") %>% 
-  set_engine("kernlab")
+#svm_model <- svm_rbf(cost = tune(), rbf_sigma = tune()) %>% 
+#  set_mode("classification") %>% 
+#  set_engine("kernlab")
 
 # Define SVM workflow
-svm_wkflow <- workflow() %>% 
-  add_model(svm_model) %>% 
-  add_recipe(recipe)
+#svm_wkflow <- workflow() %>% 
+#  add_model(svm_model) %>% 
+#  add_recipe(recipe)
 
 # Define SVM tuning grid
-svm_tune_grid <- grid_random(cost(), rbf_sigma(), size = 10)
+#svm_tune_grid <- grid_random(cost(), rbf_sigma(), size = 10)
 
 # Store model results
 #svm_tuned <- tune_grid(
@@ -110,44 +119,72 @@ svm_tune_grid <- grid_random(cost(), rbf_sigma(), size = 10)
 #  metrics = metric_set(roc_auc)
 #)
 
+# Save SVM model
+# write_rds(svm_tuned, file = "models/svm.rds")
+
+# load svm model
+# svm_tuned <- read_rds(file = "models/svm.rds")
+
+#best_svm_model <- collect_metrics(svm_tuned) %>%
+#  filter(.metric == "roc_auc") %>%
+#  arrange(desc(mean)) %>%
+#  slice(1)
+
+#best_svm_model
+
+# SVM autoplot
+#autoplot(svm_tuned, metric = 'roc_auc') + 
+#  ggtitle("SVM Classifier ROC AUC Tuning Results") + 
+#  ylab("Area Under ROC Curve") + 
+#  theme_minimal()
+
+# Classification accuracy computation
+
+#final_svm_model <- finalize_workflow(svm_wkflow, best_svm_model)
+#final_svm_model_train <- fit(final_svm_model, text_training)
+
+#final_svm_model_test <- augment(final_svm_model_train, new_data = text_testing)
+
+# View raw results
+#final_svm_model_test
+
+# Set metric to measure
+#text_metric <- metric_set(accuracy)
+
+# Store test set accuracy measure
+#final_svm_model_test_metrics <- text_metric(final_svm_model_test, truth = mclass, estimate = .pred_class)
+
+# view accuracy on test set
+#final_svm_model_test_metrics
 ```
 
 
 ```{r}
-# Split labels and predictors
+# Perform PCA on data set
+# Most of this section is commented out for time convenience 
+# Results are stored  'principal_components.RData'
 
-# Isolate predictors
-train_preds <- tokenized_data %>%
-  select(-.id, -mclass)
+# Split tokenized dataset
+
+# Isolate predictors (tokens)
+#train_preds <- tokenized_data %>%
+#  select(-.id, -mclass)
 
 # Isolate Labels
-train_labels <- tokenized_data %>%
-  select(.id, mclass)
+#train_labels <- tokenized_data %>%
+#  select(.id, mclass)
 
-# View Predictors
-head(train_preds)
-
-# View labels
-head(train_labels)
-```
-
-
-```{r}
-# Perform PCA on training set
-# This section is commented out for time convenience 
-# Results are stored as 'principal_components.RData'
-
-# Ensure all columns in train_preds are numeric
+# Ensure all columns in train_preds (tokens) are numeric
 # train_preds <- as.data.frame(lapply(train_preds, as.numeric))  # Convert all columns to numeric
 
-# Step 2: Remove near-zero variance columns to reduce dimensionality
+# Remove near-zero variance columns to reduce dimensionality
 # nzv <- nearZeroVar(train_preds, saveMetrics = TRUE)
 # train_preds_reduced <- train_preds[, !nzv$nzv]  # Keep only columns with non-zero variance
 
 # Convert to a matrix for PCA
 # train_matrix <- as.matrix(train_preds_reduced)
 
-# Perform PCA, find 50 components
+# Perform PCA, use 50 components
 # k <- 50 
 # pca_irlba <- irlba(train_matrix, nv = k)
 
@@ -162,29 +199,48 @@ head(train_labels)
 
 ```{r}
 # load the principal components
-load("~/GitHub/module-2-group15/scripts/principal_components.RData")
+# load("~/GitHub/module-2-group15/scripts/principal_components.RData")
 ```
 
 
 ```{r}
 # Convert principal components to data frame
-pc_df <- as.data.frame(principal_components)
+#pc_df <- as.data.frame(principal_components)
 
-# Combine labels with new projected matrix
-projected_train_set <- train_labels %>%
-  transmute(mclass = factor(mclass)) %>%
-  bind_cols(pc_df)
+# Combine labels with projected PC matrix
+#projected_data <- train_labels %>%
+#  transmute(mclass = factor(mclass)) %>%
+#  bind_cols(pc_df)
+
+# save projected data
+# save(projected_data, file='projected_data.RData')
 ```
 
 ```{r}
+# load full projected dataset
+load("~/GitHub/module-2-group15/scripts/projected_data.RData")
+```
+
+
+```{r}
+# Split dataset into testing and training
+text_split <- initial_split(data=projected_data, prop=0.7, strata=mclass)
+
+text_training = training(text_split)
+
+text_testing = testing(text_split)
+```
+
+
+```{r}
 # v-fold cross validation
-text_folds <- vfold_cv(data=projected_train_set, v=3, strata=mclass)
+text_folds <- vfold_cv(data=text_training, v=3, strata=mclass)
 ```
 
 
 ```{r}
 # Create a recipe for the model
-text_recipe <- recipe(mclass ~ ., data=projected_train_set) %>%
+text_recipe <- recipe(mclass ~ ., data=text_training) %>%
   step_dummy(all_nominal_predictors()) %>%  
   step_normalize(all_predictors()) %>% 
   step_zv(all_predictors()) %>%  
@@ -208,12 +264,12 @@ svm_wkflow <- workflow() %>%
 svm_tune_grid <- grid_random(cost(), rbf_sigma(), size = 10)
 
 # Store model results
-svm_tuned <- tune_grid(
-  object=svm_wkflow,
-  resamples = text_folds,
-  grid = svm_tune_grid,
-  metrics = metric_set(roc_auc)
-)
+#svm_tuned <- tune_grid(
+#  object=svm_wkflow,
+#  resamples = text_folds,
+#  grid = svm_tune_grid,
+#  metrics = metric_set(roc_auc)
+#)
 ```
 
 ```{r}
@@ -243,14 +299,26 @@ autoplot(svm_tuned, metric = 'roc_auc') +
 
 
 ```{r}
-# Classification accuracy visualization (TODO)
-
-# have to take the testing set, tokenize, and get into pca form
-# use this pca form testing set, run trained model on it.
+# Classification accuracy computation
 
 final_svm_model <- finalize_workflow(svm_wkflow, best_svm_model)
-final_svm_model_train <- fit(final_svm_model, projected_train_set)
+final_svm_model_train <- fit(final_svm_model, text_training)
 
-# final_svm_model_test <- augment(final_svm_model_train, new_data = claims_test)
-# final_svm_model_test
+final_svm_model_test <- augment(final_svm_model_train, new_data = text_testing)
+
+# View raw results
+final_svm_model_test
 ```
+
+```{r}
+# Set metric to measure
+text_metric <- metric_set(accuracy)
+
+# Store test set accuracy measure
+final_svm_model_test_metrics <- text_metric(final_svm_model_test, truth = mclass, estimate = .pred_class)
+
+# view accuracy on test set
+final_svm_model_test_metrics
+```
+
+Final model accuracy on testing set: ~73%

@@ -5,7 +5,7 @@ date: "2024-11-15"
 output: html_document
 ---
 
-```{r}
+```{r, warning=FALSE}
 # Import libraries
 library(dplyr)
 library(tidyr)
@@ -40,7 +40,7 @@ folds = vfold_cv(data=token_data, v=3, strata = mclass)
 recipe = recipe(mclass ~ ., data=training %>% select(-.id)) %>%
   step_pca(all_predictors(), num_comp = 100) %>%
   step_dummy(all_nominal_predictors()) %>%
-  step_zv(all_predictors(), -all_outcomes())
+  step_zv(all_predictors(), -all_outcomes()) %>%
   step_nzv(all_predictors(), -all_outcomes())
 ```
 
