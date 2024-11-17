@@ -71,6 +71,49 @@ head(tokenized_data)
 ```
 
 ```{r}
+# Method 2 testing (TODO)
+
+# split data
+
+split = initial_split(tokenized_data, prop = 0.70, strata = mclass)
+training = training(split)
+testing = testing(split)
+
+# v fold cross validation
+text_folds = vfold_cv(data=tokenized_data, v=3, strata = mclass)
+
+# create recipe with pca
+recipe = recipe(mclass ~ ., data=training %>% select(-.id)) %>%
+  step_pca(all_predictors(), num_comp = 100) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_zv(all_predictors(), -all_outcomes()) %>%
+  step_nzv(all_predictors(), -all_outcomes())
+  
+# run svm model on training set
+svm_model <- svm_rbf(cost = tune(), rbf_sigma = tune()) %>% 
+  set_mode("classification") %>% 
+  set_engine("kernlab")
+
+# Define SVM workflow
+svm_wkflow <- workflow() %>% 
+  add_model(svm_model) %>% 
+  add_recipe(recipe)
+
+# Define SVM tuning grid
+svm_tune_grid <- grid_random(cost(), rbf_sigma(), size = 10)
+
+# Store model results
+#svm_tuned <- tune_grid(
+#  object=svm_wkflow,
+#  resamples = text_folds,
+#  grid = svm_tune_grid,
+#  metrics = metric_set(roc_auc)
+#)
+
+```
+
+
+```{r}
 # Split labels and predictors
 
 # Isolate predictors

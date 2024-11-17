@@ -66,13 +66,13 @@ rf_grid = grid_random(
 ```
 
 ```{r}
-# rf_tune = tune_grid(
+#rf_tune = tune_grid(
 #   rf_wrkflw,
 #   resamples = folds,
 #   grid = rf_grid
 # )
-# 
-# save(rf_tune, file = "../results/rf-binary.rda")
+ 
+#save(rf_tune, file = "../results/rf-binary.rda")
 ```
 
 ```{r}

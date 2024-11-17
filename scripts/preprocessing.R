@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ## this script contains functions for preprocessing
 ## claims data; intended to be sourced 
 require(tidyverse)
@@ -139,6 +138,6 @@ reproject_fn <- function(.dtm, .projection_fn_out){
   as_tibble(as.matrix(.dtm) %*% .projection_fn_out$projection)
 }
 
-prelim1_data = parse_data(claims_raw)
+# prelim1_data = parse_data(claims_raw)
 
-save(prelim1_data, file = 'data/prelim1_data.RData')
+# save(prelim1_data, file = 'data/prelim1_data.RData')
