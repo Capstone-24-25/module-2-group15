@@ -91,7 +91,7 @@ nlp_fn_test <- function(parse_data.out){
     bind_tf_idf(term = token.lem, 
                 document = .id,
                 n = n) %>%
-    pivot_wider(id_cols = c('.id', 'mclass'),
+    pivot_wider(id_cols = c('.id'),
                 names_from = 'token.lem',
                 values_from = 'tf_idf',
                 values_fill = 0)
