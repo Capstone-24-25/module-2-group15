@@ -87,7 +87,7 @@ nlp_fn_test <- function(parse_data.out){
                                              '[[:punct:]]')) %>%
     mutate(token.lem = lemmatize_words(token)) %>%
     filter(str_length(token.lem) > 2) %>%
-    count(.id, mclass, token.lem, name = 'n') %>%
+    count(.id, token.lem, name = 'n') %>%
     bind_tf_idf(term = token.lem, 
                 document = .id,
                 n = n) %>%
