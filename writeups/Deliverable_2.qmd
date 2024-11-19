@@ -1,0 +1,35 @@
+---
+title: "Deliverable 2"
+format: html
+editor: visual
+---
+
+## Question (Placeholder)
+
+-   ***Deliverable 2:*** write a 1-page summary of methods and findings for task 4. This should describe text preprocessing, your predictive models, and estimated prediction accuracy for each model. Store the rendered document in the `writeups` directory.
+
+## Methods
+
+-   Text pre-processing, all models used nlp_fn / nlp_fn_multi (describe the function)
+
+    -   Random forest (binary/multi-class) model: parse_data(claims_raw), scraped headers and p
+
+    -   Support vector machine (multi-class) model: parse_data(claims_raw), scraped headers and p
+
+    -   Neural network (binary) model: parse_data(claims_raw), scraped span as well as headers and p
+
+-   Describe predictive models (how they were trained, any dependencies, model results)
+
+    -   Each model took the raw data, and tokenized it. In each recipe, predictors with zero and near zero variance were dropped, explain tuning hyperparameters for each model
+
+        -   Random forest binary/multi-class: tokenized data was split into testing and training, pca was performed in the recipe
+
+        -   Support vector machine multi-class: after tokenization, pca was performed on the tokenized dataset, and then the svm was trained on the projected data, using a recipe that was defined with the projected data.
+
+        -   Neural network binary: data were tokenized via vectorization. optimizer was adam, loss was binary crossentropy, used 64 hidden layers
+
+## Findings
+
+-   Model results (did binary do better than multi-class?, explain each model's results, explain that interpretation does not matter in this classification problem - we can rely on the accuracies)
+
+-   Best model(s), training accuracy, final thoughts, anything that could've been done better (include bigrams, ngrams couldve changed results)

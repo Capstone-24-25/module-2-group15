@@ -30,7 +30,7 @@ library(vip)
 ```
 
 ```{r}
-# Notes
+# Notes and dependencies
 # PCA is performed on the tokenized dataset prior to training the model
 # the prelim1_data was obtained by running parse_data(claims_raw) in preprocessing script
 # Uses 50 principal components
