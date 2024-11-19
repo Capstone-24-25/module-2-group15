@@ -10,6 +10,8 @@ editor: visual
 
 ## Methods
 
+To obtain the raw HTML data, our models used two different methods – scraping the paragraph context with headers, and scraping the paragraph content with headers and span. The models that we ran used a natural language processing function to clean raw HTML data into a suitable format. This included getting rid of HTML code, stripping punctuation, and removing any stopwords.
+
 -   Text pre-processing, all models used nlp_fn / nlp_fn_multi (describe the function)
 
     -   Random forest (binary/multi-class) model: parse_data(claims_raw), scraped headers and p
