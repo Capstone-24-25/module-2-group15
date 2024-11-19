@@ -62,17 +62,24 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="question" class="level2">
-<h2 class="anchored" data-anchor-id="question">Question</h2>
-<ul>
-<li><strong><em>Deliverable 2:</em></strong> write a 1-page summary of methods and findings for task 4. This should describe text preprocessing, your predictive models, and estimated prediction accuracy for each model. Store the rendered document in the <code>writeups</code> directory.</li>
-</ul>
-</section>
 <section id="methods" class="level2">
 <h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<section id="data-acquisition-and-pre-processing" class="level4">
+<h4 class="anchored" data-anchor-id="data-acquisition-and-pre-processing">Data Acquisition and Pre-processing</h4>
+<p>For our models, we chose to run Random Forests, a Support Vector Machine (SVM), and a Neural Network. To prepare the raw HTML data, we employed two different approaches for each predictive model. Both the Random Forest and SVM models utilized data scraped from paragraph content along with corresponding headers. In contrast, the Neural Network model leveraged a more enriched dataset that included paragraph content, headers, and span elements. This modification for the Neural Network was adopted after observing improved performance when span data was included. Interestingly, this was not true for the other models.</p>
+<p>All raw HTML data were then preprocessed using a natural language processing (NLP) function. This function cleaned the data by removing HTML tags, stripping punctuation, and eliminating stopwords. The cleaned data was then tokenized to create a format suitable for the machine learning models. However, none of our final models used any bigram or ngram data when training, as the observed performance did not change significantly.</p>
+</section>
+<section id="model-setup-and-dependencies" class="level4">
+<h4 class="anchored" data-anchor-id="model-setup-and-dependencies">Model Setup and Dependencies</h4>
+<p>Each of our models utilized different approaches to optimize performance based on experimental findings. The Random Forest and SVM models used dimensionality reduction through Principal Component Analysis (PCA), while the Neural Network used vectorization for improved learning.</p>
+<p>For both of the Random Forest models (binary and multi-class), the tokenized data was divided into training and testing sets. PCA was then applied in the recipe to reduce dimensionality, using 100 components. Predictors with zero or near-zero variance were dropped, and 3-fold cross-validation was implemented. Finally, the hyperparameters were tuned to find the best model configuration.</p>
+<p>For the SVM (multi-class) model, PCA was perfomed on the tokenized data directly, using only 50 components, as it was found that more components did not yield significant accuracy improvements. This projected data was then split into testing and training sets. Similar to the Random Forest models, predictors with zero or near-zero variance were dropped, 3-fold cross-validation was used, followed by hyperparameter tuning to refine the model’s performance.</p>
+<p>Finally, the Neural Network (binary) model was trained using tokenized data processed through vectorization, with an ouput dimension of 128. Dimensionality was reduced with two convolutional layers, each with 128 filters, a kernel size of 5, and ReLU activation, with max pooling layers of 5. After the vectorized data was split into testing and training, we used the Adam optimization algorithm, a binary cross-entropy loss function, and a single hidden layer comprising of 64 nodes. A dropout layer with a rate of 0.5 was added to prevent overfitting.</p>
+</section>
 </section>
 <section id="findings" class="level2">
 <h2 class="anchored" data-anchor-id="findings">Findings</h2>
+<p>The Random Forest model had the highest accuracy for binary classification at 79%, narrowly outperforming the Neural Network’s binary classification accuracy of 78%. For multi-class classification, the Random Forest achieved 78% accuracy, surpassing the Support Vector Machine, which only had 73%. Overall, the best model for both the binary and multi-class classification was the Random Forest.</p>
 </section>
 
 </main>
