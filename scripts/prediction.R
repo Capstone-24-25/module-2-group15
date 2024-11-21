@@ -13,27 +13,20 @@ require(qdapRegex)
 require(vip)
 require(stopwords)
 require(tokenizers)
-load("data/claims-test.RData")
-load("data/claims-raw.RData")
-load("data/prelim1_data.RData")
-source("scripts/preprocessing.R")
+load("../data/claims-test.RData")
+load("../data/claims-raw.RData")
+load("../data/prelim1_data.RData")
+source("../scripts/preprocessing.R")
 
 
 ########################################
 #             Binary Prep              #
 ########################################
 
-load("results/rf-binary.rda")
-parsed_claims <- parse_data(claims_raw)
-token_data <- nlp_fn(parsed_claims)
-token_data$bclass <- as.factor(token_data$bclass)
+load("../results/rf-binary.rda")
+load("../data/claims-training-binary.RData")
 
-split <- initial_split(token_data, prop = 0.75, strata = bclass)
-training <- training(split)
-testing <- testing(split)
-folds <- vfold_cv(data = token_data, v = 3, strata = bclass)
-
-recipe <- recipe(bclass ~ ., data = training %>% select(-.id)) %>%
+recipe <- recipe(bclass ~ ., data = training_binary %>% select(-.id)) %>%
   step_pca(all_predictors(), num_comp = 100) %>%
   step_dummy(all_nominal_predictors()) %>%
   step_zv(all_predictors()) %>%
@@ -60,7 +53,7 @@ rf_grid <- grid_random(
 
 rf_best <- select_best(rf_tune, metric = "roc_auc")
 rf_final_binary <- finalize_workflow(rf_wrkflw, rf_best)
-rf_final_binary <- fit(rf_final_binary, training)
+rf_final_binary <- fit(rf_final_binary, training_binary)
 
 ########################################
 
@@ -68,16 +61,10 @@ rf_final_binary <- fit(rf_final_binary, training)
 #           Multiclass Prep            #
 ########################################
 
-load("results/rf-mutliclass.rda")
-token_data <- nlp_fn_multi(parsed_claims)
-token_data$mclass <- as.factor(token_data$mclass)
+load("../results/rf-mutliclass.rda")
+load("../data/claims-training-multi.RData")
 
-split <- initial_split(token_data, prop = 0.75, strata = mclass)
-training <- training(split)
-testing <- testing(split)
-folds <- vfold_cv(data = token_data, v = 3, strata = mclass)
-
-recipe <- recipe(mclass ~ ., data = training %>% select(-.id)) %>%
+recipe <- recipe(mclass ~ ., data = training_multi %>% select(-.id)) %>%
   step_pca(all_predictors(), num_comp = 100) %>%
   step_dummy(all_nominal_predictors()) %>%
   step_zv(all_predictors(), -all_outcomes()) %>%
@@ -104,7 +91,7 @@ rf_grid <- grid_random(
 
 rf_best <- select_best(rf_tune, metric = "roc_auc")
 rf_final_multi <- finalize_workflow(rf_wrkflw, rf_best)
-rf_final_multi <- fit(rf_final_multi, training)
+rf_final_multi <- fit(rf_final_multi, training_multi)
 
 ########################################
 
@@ -113,7 +100,7 @@ clean_df <- claims_test %>%
   parse_data() %>%
   nlp_fn_test()
 
-train_columns <- colnames(training)
+train_columns <- colnames(training_binary)
 test_columns <- colnames(clean_df)
 missing_columns <- setdiff(train_columns, test_columns)
 
@@ -148,10 +135,14 @@ multi_pred_df <- clean_df %>%
   select(.id) %>%
   bind_cols(preds_prob_multi, preds_class_multi)
 
-# export (KEEP THIS FORMAT IDENTICAL)
-# pred_df <- clean_df %>%
-#   bind_cols(bclass.pred = pred_classes) %>%
-#   select(.id, bclass.pred)
+preds <- tibble(
+  binary = binary_pred_df,
+  multi = multi_pred_df
+)
 
-save(binary_pred_df, file = "results/binary-preds-group15.RData")
-save(multi_pred_df, file = "results/multi-preds-group15.RData")
+# # export (KEEP THIS FORMAT IDENTICAL)
+# # pred_df <- clean_df %>%
+# #   bind_cols(bclass.pred = pred_classes) %>%
+# #   select(.id, bclass.pred)
+
+save(preds, file = "../results/preds-group15.RData")
