@@ -18,6 +18,9 @@ load("../data/claims-raw.RData")
 load("../data/prelim1_data.RData")
 source("../scripts/preprocessing.R")
 
+# Please note that our deployable models were too big to be saved in GitHub.
+# Instead, we saved pre-fitted models, and then fit the models in this file
+# on the same training data they were tuned on.
 
 ########################################
 #             Binary Prep              #
@@ -95,11 +98,16 @@ rf_final_multi <- fit(rf_final_multi, training_multi)
 
 ########################################
 
+########################################
+#             Prediction               #
+########################################
+
 # apply preprocessing pipeline
 clean_df <- claims_test %>%
   parse_data() %>%
   nlp_fn_test()
 
+# adding padding to the test data set
 train_columns <- colnames(training_binary)
 test_columns <- colnames(clean_df)
 missing_columns <- setdiff(train_columns, test_columns)

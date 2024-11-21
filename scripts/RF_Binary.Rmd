@@ -72,13 +72,13 @@ rf_grid <- grid_random(
 ```
 
 ```{r}
-rf_tune <- tune_grid(
-  rf_wrkflw,
-  resamples = folds,
-  grid = rf_grid
-)
+# rf_tune <- tune_grid(
+#   rf_wrkflw,
+#   resamples = folds,
+#   grid = rf_grid
+# )
 
-save(rf_tune, file = "../results/rf-binary.rda")
+# save(rf_tune, file = "../results/rf-binary.rda")
 ```
 
 ```{r}
@@ -89,15 +89,16 @@ rf_best <- select_best(rf_tune, metric = "roc_auc")
 ```
 
 ```{r}
-rf_final <- finalize_workflow(rf_wrkflw, rf_best)
-rf_final <- fit(rf_final, training)
+load("../data/claims-testing-binary.RData")
+rf_final_binary <- finalize_workflow(rf_wrkflw, rf_best)
+rf_final_binary <- fit(rf_final, training)
 
-rf_final %>%
+rf_final_binary %>%
   extract_fit_parsnip() %>%
   vip() +
   theme_minimal()
 
-rf_final_test <- augment(rf_final, testing) %>%
+rf_final_test <- augment(rf_final_binary, testing_binary) %>%
   select(bclass, starts_with(".pred"))
 
 accuracy_result <- rf_final_test %>%
@@ -105,4 +106,4 @@ accuracy_result <- rf_final_test %>%
 
 (accuracy_result)
 ```
-Final Accuracy: ~79%
+Final Accuracy: ~81%
