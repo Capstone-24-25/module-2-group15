@@ -1,0 +1,51 @@
+---
+title: "Deliverable 1"
+format: html
+editor: visual
+---
+
+```{r setup, echo=F, warning=F, message=F}
+require(tidyverse)
+require(yardstick)
+
+load('../data/preliminary/no_headers_pred_df.RData')
+load('../data/preliminary/headers_pred_df.RData')
+load('../data/preliminary/prelim2/bigrams_results_final.RData')
+
+panel <- metric_set(sensitivity, 
+                    specificity, 
+                    accuracy, 
+                    roc_auc)
+
+no_headers_acc <- no_headers_pred_df %>% 
+  panel(truth = bclass, 
+       estimate = bclass.pred, 
+       pred, 
+       event_level = 'second') %>% 
+  filter(.metric == 'accuracy') %>% 
+  pull(.estimate)
+
+headers_acc <- headers_pred_df %>% 
+  panel(truth = bclass, 
+       estimate = bclass.pred, 
+       pred, 
+       event_level = 'second') %>% 
+  filter(.metric == 'accuracy') %>% 
+  pull(.estimate)
+
+bigram_acc <- pred_df %>% 
+  panel(truth = bclass, 
+       estimate = bclass.pred, 
+       pred, 
+       event_level = 'second') %>% 
+  filter(.metric == 'accuracy') %>% 
+  pull(.estimate)
+```
+
+### Findings
+
+For task 1, we trained an elastic net regression model on text found under paragraph tags from HTML pages to perform binary classification in order to detect pages that did or did not show signs of fraud. We performed PCA to reduce the total variables from 33063 down to 151 principal components that accounted for 70% of the variance. We fit an elastic net logistic regression model with an mixing parameter of .3 and performed cross validation in order to find the ideal lambda value of 0.0117. *This model had an accuracy of `r round(no_headers_acc, 4)`.*
+
+We then fit another model with the same methods, this time including text included under the header tags as the dataset. The number of principle components became 180 that accounted for 70% of the variance of the within the dataset from the original 34069 total unigrams. At the mixing parameter of .3, and found the ideal lambda value to be 0.0137 through cross validation, *this model had an improved accuracy of `r round(headers_acc, 4)` compared to our previous model.*
+
+For our final model, we the predicted log-odd ratios using our unigram model from the task 1. We then performed PCA on the dataset to reduce the number of features from 251409 to 128 unique bigrams that accounted for 70% of variance within the dataset, and joined the log-odds ratios before training. We once again fit an elastic linear net model with a mixing parameter of .3, and found the optimal lambda penalty to be 0.04201. *Interestingly we found that this final model had a lower accuracy compared to the This model had an accuracy of `r round(bigram_acc, 4)`*
